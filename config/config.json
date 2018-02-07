@@ -1,0 +1,7 @@
+{
+  "database_name" : "DYLT_DEV",
+  "database_user" : "ETanner",
+  "database_password" : "Bambie69",
+  "database_host" : "db2prod01",
+  "database_port" : "50000"
+}
