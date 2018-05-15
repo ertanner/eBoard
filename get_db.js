@@ -128,7 +128,7 @@ router.get('/srvmem', function (req, res) {
         var stmt = 'SELECT cast(((T.CURRENT_PARTITION_MEM * 1.0) / T.MAX_PARTITION_MEM * 1.0) * 100.0 as decimal(6,3)) PERCENT_USED,\n' +
             ' case\n' +
             '    when ((T.CURRENT_PARTITION_MEM * 1.0) / T.MAX_PARTITION_MEM * 1.0) * 100.0 > 90.0 then \'red\'\n' +
-            '    when ((T.CURRENT_PARTITION_MEM * 1.0) / T.MAX_PARTITION_MEM * 1.0) * 100.0 > 80.0 then \'yellow\'\n' +
+            '    when ((T.CURRENT_PARTITION_MEM * 1.0) / T.MAX_PARTITION_MEM * 1.0) * 100.0 > 85.0 then \'yellow\'\n' +
             '    else \'green\'\n' +
             ' end V_COLOR\n' +
             'FROM TABLE (SYSPROC.ADMIN_GET_DBP_MEM_USAGE()) AS T with UR'
@@ -240,65 +240,53 @@ router.get('/bpHitRt', function (req, res) {
         })
     });
 });
-router.get('/iref', function (req, res) {
-    let map1 = new Map()
-    let map2 = new Map()
-    let rslt = new Map()
-    console.log('rslt1' + rslt)
+router.get('/irefPeriod', function (req, res) {
     ibmdb_db2admin.open(con,function(err,conn){
         if (err){
-            return console.log('Error: ' + err)
-        } else {
-            var stmt1 = 'select STAT_TIME, IREF \n' +
-                'from TMWIN.DYLT_IREF_STATS\n' +
-                'FETCH FIRST 10 ROWS ONLY'
-
-            var stmt2 = 'select STAT_TIME, IREF_PERIOD \n' +
-                'from TMWIN.DYLT_IREF_STATS\n' +
-                'FETCH FIRST 10 ROWS ONLY'
-
-            conn.query(stmt1, function (err, rows1) {
-                if (err) {
-                    console.log('Error: ' + err)
-                } else {
-                    for (var i = 0; i < rows1.length; i++) {
-                        map1.set(rows1[i].STAT_TIME, rows1[i].IREF)
-                    }
-                    console.log('map1a' + map1)
-                }
-            })
-            console.log('map1b' + map1)
-            conn.query(stmt2, function (err, rows2) {
-                if (err) {
-                    console.log(err)
-                } else {
-                    for (var i = 0; i < rows2.length; i++) {
-                        map2.set(rows2[i].STAT_TIME, rows2[i].IREF_PERIOD)
-                        // console.log(map2)
-                    }
-                    //  console.log(map2)
-                }
-            })
-            callbacks.push
-            //we now have an open connection to the database
-            conn.close(function (err) {
-                console.log("the database connection is now closed");
-            });
+            return console.log(err)
         }
-        rslt.set('Overall', map1)
-        rslt.set('Period', map2)
-        console.log('rslt2' + rslt)
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
-        res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
-        res.setHeader('Access-Control-Allow-Credentials', true); // If needed
-        res.json(rslt)
+        var stmt = 'select \'Period\' as Type, STAT_TIME, IREF_PERIOD \n' +
+            'from TMWIN.DYLT_IREF_STATS\n' +
+            'order by STAT_TIME \n' +
+            'FETCH FIRST 10 ROWS ONLY\n' +
+            'with UR'
+
+        conn.query(stmt, function (err,rows) {
+            if (err){
+                console.log(err);
+            }else {
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
+                res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
+                res.setHeader('Access-Control-Allow-Credentials', true); // If needed
+                res.json(rows)
+            }
+        })
     });
-    // console.log(map1)
-    // console.log(map2)
+});
+router.get('/irefOverall', function (req, res) {
+    ibmdb_db2admin.open(con,function(err,conn){
+        if (err){
+            return console.log(err)
+        }
+        var stmt = 'select STAT_TIME, IREF \n' +
+            'from TMWIN.DYLT_IREF_STATS\n' +
+            'order by STAT_TIME\n' +
+            'FETCH FIRST 10 ROWS ONLY'
 
-
-
+        conn.query(stmt, function (err,rows) {
+            if (err){
+                console.log(err);
+            }else {
+                console.log(rows);
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
+                res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
+                res.setHeader('Access-Control-Allow-Credentials', true); // If needed
+                res.json(rows)
+            }
+        })
+    });
 });
 router.get('/irefData', function (req, res) {
     ibmdb_db2admin.open(con,function(err,conn){
@@ -354,6 +342,41 @@ router.get('/longRun', function (req, res) {
             ')\n' +
             '   ORDER BY 7 , 6 desc\n' +
             '   with ur'
+
+        conn.query(stmt, function (err,rows) {
+            if (err){
+                console.log(err);
+            }else {
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
+                res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
+                res.setHeader('Access-Control-Allow-Credentials', true); // If needed
+                res.json(rows)
+            }
+        })
+    });
+});
+router.get('/hadr', function (req, res) {
+    ibmdb_db2admin.open(con,function(err,conn){
+        if (err){
+            return console.log(err)
+        }
+        var stmt = 'WITH HADR_STAT AS (\n' +
+            'SELECT * FROM SYSIBMADM.SNAPHADR\n' +
+            ')\n' +
+            'SELECT \'STATUS\' SERVER, \'GAP:\' || TRIM(CHAR(HADR_LOG_GAP)) LOG_FILE, CHAR(HADR_CONNECT_STATUS) LOG_PAGE, CHAR(HADR_STATE) LOG_LSN,1 as Orderby FROM HADR_STAT \n' +
+            'UNION\n' +
+            'SELECT \'DLPTMDB09\', CHAR(HADR_PRIMARY_LOG_FILE), CHAR(HADR_PRIMARY_LOG_PAGE), CHAR(HADR_PRIMARY_LOG_LSN),2 as Orderby FROM HADR_STAT \n' +
+            'UNION\n' +
+            'SELECT \'DLPTMDB01\', CHAR(HADR_STANDBY_LOG_FILE), CHAR(HADR_STANDBY_LOG_PAGE), CHAR(HADR_STANDBY_LOG_LSN),3 as Orderby FROM HADR_STAT \n' +
+            'UNION\n' +
+            'SELECT \'\', \n' +
+            '\'BACKLOG: \' || CHAR(\n' +
+            '    INT(translate(LEFT(HADR_PRIMARY_LOG_FILE, LENGTH(HADR_PRIMARY_LOG_FILE)),\'\', \' abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.`~!@#$%^&*()-_=+\\|[]{};:",<>/?  \')) -\n' +
+            '    INT(translate(LEFT(HADR_STANDBY_LOG_FILE, LENGTH(HADR_STANDBY_LOG_FILE)),\'\', \' abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.`~!@#$%^&*()-_=+\\|[]{};:",<>/?  \')))\n' +
+            ', \'\', CHAR(HADR_PRIMARY_LOG_LSN - HADR_STANDBY_LOG_LSN),4 as Orderby FROM HADR_STAT \n' +
+            'ORDER BY Orderby\n' +
+            'with ur'
 
         conn.query(stmt, function (err,rows) {
             if (err){
