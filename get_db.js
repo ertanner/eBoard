@@ -8,12 +8,43 @@ var ibmdb = require('ibm_db'),
 var ibmdb_db2admin = require('ibm_db'),
     con = "DATABASE=DYLT_IMP;HOSTNAME=db2prod01;PORT=50000;PROTOCOL=TCPIP;UID=db2admin;PWD=Maddox01";
 
+var ibmdb_Rep = require('ibm_db'),
+    conRep = "DATABASE=DYLT_REP;HOSTNAME=db2test01;PORT=50000;PROTOCOL=TCPIP;UID=db2admin;PWD=Maddox01";
+
+
 var router = express.Router();
 var cors = require('cors')
 router.use(cors())
 
 module.exports = router;
+// rep
+router.get('/listInv', function (req, res) {
+    ibmdb.open(conRep,function(err,conn){
+        if (err){
+            return console.log(err)
+        }
+        var stmt = 'select * from TMWIN.DYLT_OSD_INV_MGT where FOUND = 0 with ur'
 
+
+        //console.log(stmt)
+        conn.query(stmt, function (err,rows) {
+            if (err){
+                console.log(err);
+            }else {
+                console.log(rows.length);
+                console.log(rows);
+                console.log(rows.length);
+                //console.log(typeof rows);
+                res.setHeader('Content-Type', 'application/json');
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+                res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype');
+                res.setHeader('Access-Control-Allow-Credentials', true);
+                res.json(rows)
+            }
+        })
+    });
+});
 // ibmdb_db2admin
 router.get('/bphitratio', function (req, res) {
     var todayDate = new Date();
@@ -245,15 +276,13 @@ router.get('/irefPeriod', function (req, res) {
         if (err){
             return console.log(err)
         }
-        var stmt = 'select \'Period\' as Type, STAT_TIME, IREF_PERIOD \n' +
+        var stmt = 'select IREF_PERIOD\n' +
             'from TMWIN.DYLT_IREF_STATS\n' +
-            'order by STAT_TIME \n' +
-            'FETCH FIRST 10 ROWS ONLY\n' +
-            'with UR'
+            'where stat_time = (select max(stat_time) from tmwin.dylt_iref_stats)'
 
         conn.query(stmt, function (err,rows) {
             if (err){
-                console.log(err);
+                // console.log(err);
             }else {
                 res.setHeader('Access-Control-Allow-Origin', '*');
                 res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
@@ -269,21 +298,26 @@ router.get('/irefOverall', function (req, res) {
         if (err){
             return console.log(err)
         }
-        var stmt = 'select STAT_TIME, IREF \n' +
+        var stmt = 'select IREF \n' +
             'from TMWIN.DYLT_IREF_STATS\n' +
-            'order by STAT_TIME\n' +
-            'FETCH FIRST 10 ROWS ONLY'
+            'where stat_time = (select max(stat_time) from tmwin.dylt_iref_stats)'
 
         conn.query(stmt, function (err,rows) {
             if (err){
                 console.log(err);
             }else {
-                console.log(rows);
+                var iref
+                if(Array.isArray(rows)){
+                    for( i=0; rows.length; i++){
+                        iref = rows[i]
+                    }
+                }
+                console.log(iref);
                 res.setHeader('Access-Control-Allow-Origin', '*');
                 res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
                 res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
                 res.setHeader('Access-Control-Allow-Credentials', true); // If needed
-                res.json(rows)
+                res(iref)
             }
         })
     });
