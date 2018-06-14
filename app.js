@@ -26,7 +26,7 @@ app.use(bodyParser.urlencoded({
 }));
 
 app.use(require('./get_db'));
-
+app.use(require('./ad'));
 
 var port = process.env.PORT || 1338;
 

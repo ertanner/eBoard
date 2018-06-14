@@ -1,7 +1,7 @@
 // note run "node app.js" to start web service
 // to compile run copy all files to web server
 var express = require('express');
-var moment =  require('moment');
+var moment =  require('moment'); //  time js
 
 var ibmdb = require('ibm_db'),
     cn = "DATABASE=DYLT_IMP;HOSTNAME=db2prod01;PORT=50000;PROTOCOL=TCPIP;UID=svc_sscap;PWD=$$c@p@cc0unT";
@@ -13,38 +13,103 @@ var ibmdb_Rep = require('ibm_db'),
 
 
 var router = express.Router();
-var cors = require('cors')
-router.use(cors())
-
+var cors = require('cors');
+router.use(cors());
 module.exports = router;
+
 // rep
+router.post('/insInv', function (req, res) {
+    var desc = req.body.desc
+    var found = req.body.found
+    var sql = 'insert into TMWIN.DYLT_OSD_Inv_Mgt(Description, Row_Timestamp, Found) VALUES (?, current timestamp, ?)';
+    ibmdb_Rep.open(conRep,function(err,conn){
+        if (err){
+            return console.log(err)
+        } else {
+            conn.prepare(sql, function (err, stmt) {
+                if (err) {
+                    console.log(err);
+                    res.statusCode = 500;
+                    return res.json({
+                        errors: ['Failed to enter item. ' + err]
+                    });
+                }
+                // bind the stamements
+                stmt.executeNonQuery([desc, found], function (err, result) {
+                    console.log(err);
+                    res.statusCode = 200
+                    res.setHeader('Access-Control-Allow-Origin', '*');
+                    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
+                    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
+                    res.setHeader('Access-Control-Allow-Credentials', true);
+                    res.json(result)
+                });
+            });
+        }
+    });
+});
+router.post('/delInv', function (req, res) {
+    var id = req.body.id
+    var found = req.body.found
+    console.log(id)
+    console.log(found)
+    var sql = 'delete from TMWIN.DYLT_OSD_Inv_Mgt where ID = ?';
+    console.log(sql)
+    ibmdb_Rep.open(conRep,function(err,conn){
+        if (err){
+            return console.log(err)
+        } else {
+            conn.prepare(sql, function (err, stmt) {
+                if (err) {
+                    console.log(err);
+                    res.statusCode = 500;
+                    return res.json({
+                        errors: ['Failed to enter item. ' + err]
+                    });
+                }
+                // bind the stamements
+                stmt.executeNonQuery([id], function (err, result) {
+                    console.log(err);
+                    res.statusCode = 200
+                    res.setHeader('Access-Control-Allow-Origin', '*');
+                    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
+                    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
+                    res.setHeader('Access-Control-Allow-Credentials', true);
+                    res.json(result)
+                });
+            });
+        }
+    });
+});
 router.get('/listInv', function (req, res) {
-    ibmdb.open(conRep,function(err,conn){
+    var todayDate = new Date();
+    const start = req.params.start;
+    const end = req.params.end;
+    const term = req.params.term;
+    var startDay = moment(todayDate).subtract(start, 'day').format('MM/DD/YYYY');
+    var endDay = moment(todayDate).add(end, 'day').format('MM/DD/YYYY');
+
+    ibmdb_Rep.open(conRep,function(err,connR){
         if (err){
             return console.log(err)
         }
         var stmt = 'select * from TMWIN.DYLT_OSD_INV_MGT where FOUND = 0 with ur'
 
-
-        //console.log(stmt)
-        conn.query(stmt, function (err,rows) {
+        connR.query(stmt, function (err,rows) {
             if (err){
                 console.log(err);
             }else {
-                console.log(rows.length);
-                console.log(rows);
-                console.log(rows.length);
-                //console.log(typeof rows);
-                res.setHeader('Content-Type', 'application/json');
                 res.setHeader('Access-Control-Allow-Origin', '*');
-                res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-                res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype');
-                res.setHeader('Access-Control-Allow-Credentials', true);
+                res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
+                res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
+                res.setHeader('Access-Control-Allow-Credentials', true); // If needed
                 res.json(rows)
             }
         })
     });
 });
+
+
 // ibmdb_db2admin
 router.get('/bphitratio', function (req, res) {
     var todayDate = new Date();
@@ -213,17 +278,23 @@ router.get('/dbaLocks24hr', function (req, res) {
         if (err){
             return console.log(err)
         }
-        var stmt = 'select substr(event_type,1,18) as event_type\n' +
+        var stmt = 'with t1 as (\n' +
+            'select distinct xmlid, event_type, event_timestamp \n' +
+            'from db2admin.LOCK_EVENT\n' +
+            'where EVENT_TIMESTAMP > current timestamp - 24 hours\n' +
+            '--and EVENT_TYPE = \'DEADLOCK\'\n' +
+            ')\n' +
+            'select substr(t1.event_type,1,18) as event_type\n' +
             ', count(*) as count,\n' +
             'case\n' +
             '    when count(*) > 20 then \'red\'\n' +
             '    when count(*) > 5 then \'yellow\'\n' +
             '    else \'green\'\n' +
             '    END V_COLOR\n' +
-            'from DB2ADMIN.LOCK_EVENT\n' +
-            'where EVENT_TIMESTAMP > current timestamp - 24 hours\n' +
+            'from t1\n' +
+            'where t1.EVENT_TIMESTAMP > current timestamp - 24 hours\n' +
             'group by event_type\n' +
-            'order by event_type\n' +
+            'order by t1.event_type\n' +
             'with ur'
 
         conn.query(stmt, function (err,rows) {

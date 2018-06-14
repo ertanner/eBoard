@@ -1,7 +1,16 @@
 {
-  "database_name" : "DYLT_DEV",
-  "database_user" : "ETanner",
-  "database_password" : "Bambie69",
-  "database_host" : "db2prod01",
-  "database_port" : "50000"
+  "dev": {
+    "database_name": "DYLT_DEV",
+    "database_user": "svc_sscap",
+    "database_password": "$$c@p@cc0unT",
+    "database_host": "db2prod01",
+    "database_port": "50000"
+  },
+  "prod": {
+    "database_name": "DYLT_IMP",
+    "database_user": "db2admin",
+    "database_password": "Maddox01",
+    "database_host": "db2prod01",
+    "database_port": "50000"
+  }
 }

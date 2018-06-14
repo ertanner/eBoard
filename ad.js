@@ -6,23 +6,11 @@ var ActiveDirectory = require('activedirectory');
 router.use(cors());
 module.exports = router;
 
-router.get('/getUser', function (req, res){
-    var username = 'etanner';
-    var password = 'ericjudydobyshadow';
-    var config = { url: 'ldap://daylight.ads:389',
-        baseDN: 'DC=daylight,DC=ads',
-        username: 'SVC_SSCAP',
-        password: '$$c@p@cc0unT' };
-
-    var ad = new ActiveDirectory(config);
-
-    console.log(username);
-    console.log(password);
-
+function authUser(ad, username, password){
+    console.log('Hi')
     ad.authenitcate(username, password, function(err, auth){
         if (err) {
             console.log('ERROR: '+JSON.stringify(err));
-
             console.log(username);
             console.log(password);
             return;
@@ -30,6 +18,7 @@ router.get('/getUser', function (req, res){
 
         if (auth) {
             console.log('Authenticated!');
+            console.log(auth);
             res.statusCode = 200
             res.setHeader('Access-Control-Allow-Origin', '*');
             res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
@@ -41,6 +30,18 @@ router.get('/getUser', function (req, res){
             console.log('Authentication failed!');
         }
     });
+}
+router.get('/getUser', function (req, res){
+    var username = 'SVC_SSCAP';
+    var password = '$$c@p@cc0unT';
+    var config = { url: 'ldap://daylight.ads:389',
+        baseDN: 'OU=Daylight Users,DC=daylight,DC=ads',
+        username: 'SVC_SSCAP',
+        password: '$$c@p@cc0unT' };
 
+    var ad = new ActiveDirectory(config);
+
+    console.log(username);
+    console.log(password);
 })
 
