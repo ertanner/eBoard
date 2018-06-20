@@ -17,6 +17,7 @@ var cors = require('cors');
 router.use(cors());
 module.exports = router;
 
+
 // rep
 router.post('/insInv', function (req, res) {
     var desc = req.body.desc
