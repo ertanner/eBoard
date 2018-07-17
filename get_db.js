@@ -608,9 +608,9 @@ router.get('/MessageQueueStatus', function (req, res) {
             if (err){
                 console.log(err);
             }else {
-                console.log(rows.length);
-                console.log(rows);
-                console.log(rows.length);
+                // console.log(rows.length);
+                // console.log(rows);
+                // console.log(rows.length);
                 //console.log(typeof rows);
                 res.setHeader('Content-Type', 'application/json');
                 res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1149,7 +1149,6 @@ router.get('/devRestore', function (req, res) {
             if (err){
                 console.log(err);
             }else {
-                console.log(rows)
                 res.setHeader('Access-Control-Allow-Origin', '*');
                 res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
                 res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
