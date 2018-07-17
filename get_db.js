@@ -10,6 +10,12 @@ var ibmdb_db2admin = require('ibm_db'),
 
 var ibmdb_Rep = require('ibm_db'),
     conRep = "DATABASE=DYLT_REP;HOSTNAME=db2test01;PORT=50000;PROTOCOL=TCPIP;UID=db2admin;PWD=Maddox01";
+var ibmdb_Tst = require('ibm_db'),
+    conTst = "DATABASE=DYLT_TST;HOSTNAME=dlutmdb02;PORT=50000;PROTOCOL=TCPIP;UID=db2admin;PWD=Maddox01";
+var ibmdb_Dev = require('ibm_db'),
+    conDev = "DATABASE=DYLT_DEV;HOSTNAME=db2test01;PORT=50000;PROTOCOL=TCPIP;UID=db2admin;PWD=Maddox01";
+var ibmdb_Tpb = require('ibm_db'),
+    conTpb = "DATABASE=PROJECT;HOSTNAME=DB2project01;PORT=50000;PROTOCOL=TCPIP;UID=db2admin;PWD=Maddox01";
 
 
 var router = express.Router();
@@ -50,10 +56,9 @@ router.post('/insInv', function (req, res) {
     });
 });
 router.post('/delInv', function (req, res) {
+
     var id = req.body.id
-    var found = req.body.found
     console.log(id)
-    console.log(found)
     var sql = 'delete from TMWIN.DYLT_OSD_Inv_Mgt where ID = ?';
     console.log(sql)
     ibmdb_Rep.open(conRep,function(err,conn){
@@ -109,7 +114,58 @@ router.get('/listInv', function (req, res) {
         })
     });
 });
+router.post('/addItem', function (req, res) {
+    console.log(req.body)
+    var text = req.body.text
+    console.log(text)
+    var sql = 'INSERT INTO TMWIN.DYLT_OSD_Inv_Mgt(Description, Row_Timestamp, Found) VALUES( ?, current timestamp, 0)';
+    //console.log(sql)
+    ibmdb_Rep.open(conRep,function(err,conn){
+        if (err){
+            return console.log(err)
+        } else {
+            conn.prepare(sql, function (err, stmt) {
+                if (err) {
+                    console.log(err);
+                    res.statusCode === 500;
+                    return res.json({
+                        errors: ['Failed to enter item. ' + err]
+                    })
+                }
+                // bind the stamements
+                stmt.executeNonQuery([text], function (err, result) {
+                    if (err) {
+                        console.log(err);
+                        return res.json({
+                            errors: ['Failed to enter item. ' + err]
+                        })
+                    }else {
+                        res.statusCode === 200
 
+                        var stmt = 'select max(id) ID from TMWIN.DYLT_OSD_Inv_Mgt where found = 0 with ur'
+
+                        conn.query(stmt, function (err,rows) {
+                            if (err){
+                                console.log(err);
+                            }else {
+                                res.setHeader('Access-Control-Allow-Origin', '*');
+                                res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
+                                res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
+                                res.setHeader('Access-Control-Allow-Credentials', true); // If needed
+                                res.json(rows)
+                            }
+                        })
+                        // res.setHeader('Access-Control-Allow-Origin', '*');
+                        // res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
+                        // res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
+                        // res.setHeader('Access-Control-Allow-Credentials', true);
+                        // res.json(result)
+                        }
+                });
+            });
+        }
+    });
+});
 
 // ibmdb_db2admin
 router.get('/bphitratio', function (req, res) {
@@ -995,6 +1051,118 @@ router.get('/west2', function (req, res) {
     });
 
 });
+
+//date of last restore for each server
+router.get('/tstRestore', function (req, res) {
+    ibmdb_Tst.open(conTst,function(err,conn){
+        if (err){
+            return console.log(err)
+        }
+        var stmt = 'WITH DB_HIS AS (\n' +
+            'SELECT EID, DATE(CAST(START_TIME AS TIMESTAMP)) AS START_DATE, DAYNAME(DATE(CAST(START_TIME AS TIMESTAMP)) - 1 DAY ) DOW,\n' +
+            'TIME(CAST(START_TIME AS TIMESTAMP)) AS START_TIME, \n' +
+            'DATE(CAST(END_TIME AS TIMESTAMP)) AS END_DATE, \n' +
+            'TIME(CAST(END_TIME AS TIMESTAMP)) AS END_TIME, TIMESTAMPDIFF (2, CHAR(TIMESTAMP(END_TIME)-TIMESTAMP(START_TIME))) AS DURATION_SECONDS ,\n' +
+            'ROW_NUMBER() OVER (ORDER BY EID) CNT\n' +
+            'FROM SYSIBMADM.DB_HISTORY \n' +
+            'WHERE OPERATION = \'B\' AND SEQNUM = 1 AND TIMESTAMP(END_TIME) > CURRENT_TIMESTAMP - 444 DAYS \n' +
+            'ORDER BY 1 DESC\n' +
+            '\n' +
+            ')\n' +
+            'SELECT  DOW || \'  \' || START_DATE as DATE\n' +
+            'FROM DB_HIS\n' +
+            'ORDER BY CNT DESC\n' +
+            'fetch first row only\n' +
+            'with ur'
+
+        conn.query(stmt, function (err,rows) {
+            if (err){
+                console.log(err);
+            }else {
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
+                res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
+                res.setHeader('Access-Control-Allow-Credentials', true); // If needed
+                res.json(rows)
+            }
+        })
+    });
+});
+router.get('/tpbRestore', function (req, res) {
+    ibmdb_Tpb.open(conTpb,function(err,conn){
+        if (err){
+            return console.log(err)
+        }
+        var stmt = 'WITH DB_HIS AS (\n' +
+            'SELECT EID, DATE(CAST(START_TIME AS TIMESTAMP)) AS START_DATE, DAYNAME(DATE(CAST(START_TIME AS TIMESTAMP)) - 1 DAY ) DOW,\n' +
+            'TIME(CAST(START_TIME AS TIMESTAMP)) AS START_TIME, \n' +
+            'DATE(CAST(END_TIME AS TIMESTAMP)) AS END_DATE, \n' +
+            'TIME(CAST(END_TIME AS TIMESTAMP)) AS END_TIME, TIMESTAMPDIFF (2, CHAR(TIMESTAMP(END_TIME)-TIMESTAMP(START_TIME))) AS DURATION_SECONDS ,\n' +
+            'ROW_NUMBER() OVER (ORDER BY EID) CNT\n' +
+            'FROM SYSIBMADM.DB_HISTORY \n' +
+            'WHERE OPERATION = \'B\' AND SEQNUM = 1 AND TIMESTAMP(END_TIME) > CURRENT_TIMESTAMP - 444 DAYS \n' +
+            'ORDER BY 1 DESC\n' +
+            '\n' +
+            ')\n' +
+            'SELECT  DOW || \'  \' || START_DATE as DATE\n' +
+            'FROM DB_HIS\n' +
+            'ORDER BY CNT DESC\n' +
+            'fetch first row only\n' +
+            'with ur'
+
+        conn.query(stmt, function (err,rows) {
+            if (err){
+                console.log(err);
+            }else {
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
+                res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
+                res.setHeader('Access-Control-Allow-Credentials', true); // If needed
+                res.json(rows)
+            }
+        })
+    });
+});
+router.get('/devRestore', function (req, res) {
+    ibmdb_Dev.open(conDev,function(err,conn){
+        if (err){
+            return console.log(err)
+        }
+        var stmt = 'WITH DB_HIS AS (\n' +
+            'SELECT EID, DATE(CAST(START_TIME AS TIMESTAMP)) AS START_DATE, DAYNAME(DATE(CAST(START_TIME AS TIMESTAMP)) - 1 DAY ) DOW,\n' +
+            'TIME(CAST(START_TIME AS TIMESTAMP)) AS START_TIME, \n' +
+            'DATE(CAST(END_TIME AS TIMESTAMP)) AS END_DATE, \n' +
+            'TIME(CAST(END_TIME AS TIMESTAMP)) AS END_TIME, TIMESTAMPDIFF (2, CHAR(TIMESTAMP(END_TIME)-TIMESTAMP(START_TIME))) AS DURATION_SECONDS ,\n' +
+            'ROW_NUMBER() OVER (ORDER BY EID) CNT\n' +
+            'FROM SYSIBMADM.DB_HISTORY \n' +
+            'WHERE OPERATION = \'B\' AND SEQNUM = 1 AND TIMESTAMP(END_TIME) > CURRENT_TIMESTAMP - 444 DAYS \n' +
+            'ORDER BY 1 DESC\n' +
+            '\n' +
+            ')\n' +
+            'SELECT  DOW || \'  \' || START_DATE as DATE\n' +
+            'FROM DB_HIS\n' +
+            'ORDER BY CNT DESC\n' +
+            'fetch first row only\n' +
+            'with ur'
+
+        conn.query(stmt, function (err,rows) {
+            if (err){
+                console.log(err);
+            }else {
+                console.log(rows)
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE'); // If needed
+                res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype'); // If needed
+                res.setHeader('Access-Control-Allow-Credentials', true); // If needed
+                res.json(rows)
+            }
+        })
+    });
+});
+
+
+
+
 function getStmt(stmtType, start , end , orig ){
     console.log('');
     var rptType = '';

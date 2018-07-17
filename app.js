@@ -28,8 +28,8 @@ app.use(bodyParser.urlencoded({
 app.use(require('./get_db'));
 app.use(require('./ad'));
 
-var port = process.env.PORT || 1338;
+var port = process.env.PORT || 1337;
 
 app.listen(port, function () {
-    console.log('ready on port 1338');
+    console.log('ready on port ' + port);
 });
